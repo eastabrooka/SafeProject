@@ -1,16 +1,19 @@
+/*
+  $$$$$$$$\                        $$\        $$$$$$\             $$$$$$\
+  $$  _____|                       $$ |      $$  __$$\           $$  __$$\
+  $$ |    $$$$$$\   $$$$$$\   $$$$$$$ |      $$ /  \__| $$$$$$\  $$ /  \__|$$$$$$\
+  $$$$$\ $$  __$$\ $$  __$$\ $$  __$$ |      \$$$$$$\   \____$$\ $$$$\    $$  __$$\
+  $$  __|$$ /  $$ |$$ /  $$ |$$ /  $$ |       \____$$\  $$$$$$$ |$$  _|   $$$$$$$$ |
+  $$ |   $$ |  $$ |$$ |  $$ |$$ |  $$ |      $$\   $$ |$$  __$$ |$$ |     $$   ____|
+  $$ |   \$$$$$$  |\$$$$$$  |\$$$$$$$ |      \$$$$$$  |\$$$$$$$ |$$ |     \$$$$$$$\
+  \__|    \______/  \______/  \_______|       \______/  \_______|\__|      \_______|
+
+  By Alex Eastabrook - Converting a Digital Safe into a Food Fortress.
+  Inspired by the Covid-19 crisis and too much junk food around the house.
+*/
+
 /**************************************************************************
-  This is an example for our Monochrome OLEDs based on SSD1306 drivers
-
-  Pick one up today in the adafruit shop!
-  ------> http://www.adafruit.com/category/63_98
-
-  This example is for a 128x32 pixel display using I2C to communicate
-  3 pins are required to interface (two I2C and one reset).
-
-  Adafruit invests time and resources providing this open
-  source code, please support Adafruit and open-source
-  hardware by purchasing products from Adafruit!
-
+  OLED Library by :
   Written by Limor Fried/Ladyada for Adafruit Industries,
   with contributions from the open source community.
   BSD license, check license.txt for more information
@@ -21,10 +24,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-
 #include "Logos.h"
-
-
 #include <Keypad.h>
 
 const byte ROWS = 4; // Four rows
@@ -58,7 +58,7 @@ void printSecure();
 void printClock(uint16_t h, uint16_t m, uint16_t s);
 void printArmSafe();
 void printPromptTimeEntry();
-void printArmSafe(int H1 , int H2, int M1,int M2) ;
+void printArmSafe(int H1 , int H2, int M1, int M2) ;
 
 void setup() {
   Serial.begin(9600);
@@ -73,90 +73,99 @@ void setup() {
 
 uint32_t GetTimeEntry()
 {
-  char Keys[4] = {'0','0','0','0'};
+  char Keys[4] = {'0', '0', '0', '0'};
   char Input = 0;
 
   while (Input != 'A')
   {
-    char KeyPress = kpd.waitForKey(); 
+    char KeyPress = kpd.waitForKey();
     if (KeyPress == 'A')
     {
       break;
+    }
+    else if (KeyPress == 'B')
+    {
+      return 0;
     }
     else
     {
       Keys[3] =      Keys[2];
       Keys[2] =      Keys[1];
       Keys[1] =      Keys[0];
-      Keys[0] =       KeyPress; 
-      printArmSafe(Keys[3]  - '0',Keys[2]  - '0' , Keys[1]  - '0' , Keys[0]  - '0' );
-      
-    } 
+      Keys[0] =       KeyPress;
+      printArmSafe(Keys[3]  - '0', Keys[2]  - '0' , Keys[1]  - '0' , Keys[0]  - '0' );
+
+    }
   }
-delay(1000);
 
-  uint32_t SecondsToCount = 0; 
+  uint32_t SecondsToCount = 0;
 
-//  Tens of Hours
-    SecondsToCount += (Keys[3]  - '0') * 36000;
-//  Hours
-    SecondsToCount += (Keys[2]  - '0') * 3600;
-//  Tens of Minutes
-    SecondsToCount += (Keys[1]  - '0') * 600;
-//  Minutes
-    SecondsToCount += (Keys[0]  - '0') * 60;
+  //  Tens of Hours
+  SecondsToCount += (Keys[3]  - '0') * 36000;
+  //  Hours
+  SecondsToCount += (Keys[2]  - '0') * 3600;
+  //  Tens of Minutes
+  SecondsToCount += (Keys[1]  - '0') * 600;
+  //  Minutes
+  SecondsToCount += (Keys[0]  - '0') * 60;
 
-    return SecondsToCount; 
+  return SecondsToCount;
 
 }
 
+void RelayOpen()
+{
+  Serial.println("Sweeeets");
 
-void loop() { 
-  
+}
+void loop() {
   printOpen();
-  char key = kpd.getKey();
+  char key = 0;
   while (key != 'A')
   {
     key = kpd.getKey();
     delay(50);
-  }
-  
-  printPromptTimeEntry();
-  delay(1000);
-  
-  printArmSafe();
-  delay(1000);
-  
-  uint32_t SecondsForLockdown = GetTimeEntry();
-  printSecure();
 
-  Serial.println(SecondsForLockdown,DEC);
-  
-    for (uint32_t seconds = SecondsForLockdown; seconds > 0; seconds--)
+    if (key == 'B')
     {
-      uint32_t t; uint32_t h; uint16_t m; uint32_t s;
-
-      t = seconds;
-      s = t % 60;
-
-      t = (t - s) / 60;
-      m = t % 60;
-
-      t = (t - m) / 60;
-      h = t;
-
-      printClock(h, m, s);
-
-      if (seconds > 3600)
-      {
-        seconds -=60;
-      }
-      else if (seconds > 60)
-      {
-        seconds -=15;
-      }
+      RelayOpen();
     }
   }
+
+  printPromptTimeEntry();
+  delay(200);
+  printArmSafe();
+  uint32_t SecondsForLockdown = GetTimeEntry();
+
+  if (SecondsForLockdown > 0)
+  {
+    printSecure();
+  }
+  for (uint32_t seconds = SecondsForLockdown; seconds > 0; seconds--)
+  {
+    uint32_t t; uint32_t h; uint16_t m; uint32_t s;
+
+    t = seconds;
+    s = t % 60;
+
+    t = (t - s) / 60;
+    m = t % 60;
+
+    t = (t - m) / 60;
+    h = t;
+
+    printClock(h, m, s);
+
+    if (seconds > 3600)
+    {
+      seconds -= 60;
+    }
+    else if (seconds > 60)
+    {
+      seconds -= 15;
+    }
+  }
+}
 
 #define XPOS   0 // Indexes into the 'icons' array in function below
 #define YPOS   1
@@ -253,7 +262,7 @@ void printArmSafe() {
   display.invertDisplay(false);
 
   display.display(); // Show the display buffer on the screen
-  delay(2000);        // Pause for 1/10 second
+
 }
 
 
@@ -261,7 +270,7 @@ void printArmSafe() {
 
 
 
-void printArmSafe(int H1 , int H2, int M1,int M2) {
+void printArmSafe(int H1 , int H2, int M1, int M2) {
   char data[20];
   display.clearDisplay(); // Clear the display buffer
   display.drawBitmap(0, 0, ArmSafe, 128, 32, SSD1306_WHITE);
@@ -273,7 +282,7 @@ void printArmSafe(int H1 , int H2, int M1,int M2) {
 
   display.setTextSize(2);             // Normal 1:1 pixel scale
   display.setCursor(36, 10);            // Start at top-left corner
-  sprintf(data, "%01d%01dH:%01d%01dM", H1, H2,M1,M2);
+  sprintf(data, "%01d%01dH:%01d%01dM", H1, H2, M1, M2);
   display.println(data);
   display.invertDisplay(false);
   display.display(); // Show the display buffer on the screen
