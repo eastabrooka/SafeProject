@@ -192,8 +192,16 @@ void loop() {
     t = (t - m) / 60;
     h = t;
 
+    if ( (s>=10 && s<20) || (s>=30 && s<40) )
+    {
+      printSecure();
+    }
+    else
+    {
     printClock(h, m, s);
+    }
     WatchdogKick();
+    
 
     if (seconds > 3600)
     {
@@ -320,5 +328,4 @@ void printArmSafe(int H1 , int H2, int M1, int M2) {
   display.println(data);
   display.invertDisplay(false);
   display.display(); // Show the display buffer on the screen
-
 }
