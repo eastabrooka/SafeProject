@@ -44,7 +44,43 @@ byte colPins[COLS] = { 2, 5, 7 };
 // Create the Keypad
 Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 
+#include <avr/wdt.h>
+unsigned long resetTime = 0;
+#define TIMEOUTPERIOD 10000            // You can make this time as long as you want,
+                                       // it's not limited to 8 seconds like the normal
+                                       // watchdog
+#define WatchdogKick() resetTime = millis();  // This macro will reset the timer
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
 
+void watchdogSetup()
+{
+cli();  // disable all interrupts
+wdt_reset(); // reset the WDT timer
+MCUSR &= ~(1<<WDRF);  // because the data sheet said to
+/*
+WDTCSR configuration:
+WDIE = 1 :Interrupt Enable
+WDE = 1  :Reset Enable - I won't be using this on the 2560
+WDP3 = 0 :For 1000ms Time-out
+WDP2 = 1 :bit pattern is
+WDP1 = 1 :0110  change this for a different
+WDP0 = 0 :timeout period.
+*/
+// Enter Watchdog Configuration mode:
+WDTCSR = (1<<WDCE) | (1<<WDE);
+// Set Watchdog settings: interrupte enable, 0110 for timer
+WDTCSR = (1<<WDIE) | (0<<WDP3) | (1<<WDP2) | (1<<WDP1) | (0<<WDP0);
+sei();
+Serial.println("finished watchdog setup");  // just here for testing
+}
+
+
+ISR(WDT_vect) // Watchdog timer interrupt.
+{
+  if(millis() - resetTime > TIMEOUTPERIOD){
+    resetFunc();     // This will call location zero and cause a reboot.
+  }
+}
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
@@ -68,7 +104,7 @@ void setup() {
   }
   display.clearDisplay();
   display.display();
-
+watchdogSetup();
 }
 
 uint32_t GetTimeEntry()
@@ -119,6 +155,7 @@ void RelayOpen()
 
 }
 void loop() {
+  
   printOpen();
   char key = 0;
   while (key != 'A')
@@ -130,6 +167,7 @@ void loop() {
     {
       RelayOpen();
     }
+    WatchdogKick();
   }
 
   printPromptTimeEntry();
@@ -155,6 +193,7 @@ void loop() {
     h = t;
 
     printClock(h, m, s);
+    WatchdogKick();
 
     if (seconds > 3600)
     {
@@ -264,11 +303,6 @@ void printArmSafe() {
   display.display(); // Show the display buffer on the screen
 
 }
-
-
-
-
-
 
 void printArmSafe(int H1 , int H2, int M1, int M2) {
   char data[20];
