@@ -155,6 +155,15 @@ void RelayOpen()
 
 }
 void loop() {
+
+  if (CheckForExistingSession())
+  {
+    ResumeSession();
+  }
+
+  for (;;)
+  {
+
   
   printOpen();
   char key = 0;
@@ -211,6 +220,7 @@ void loop() {
     {
       seconds -= 15;
     }
+  }
   }
 }
 
